@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FCC - Issue Tracker</title>
+  <meta name="description" content="App for tracking project issues">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="shortcut icon" href="./public/favicon.ico" type="image/x-icon" />
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./public/style.css">
+  <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+    type="text/css">
+</head>
+  <body id="top">
+  <section class="container-social">
+    <div class="text-right">
+      <ul class="social-list">
+        <li>
+          <a href="https://www.linkedin.com/in/sonyacooley/" title="linkedin" target="blank"><i
+              class="fa fa-linkedin"></i></a>
+        </li>
+        <li>
+          <a href="https://github.com/Sonnerz" title="github" target="blank"><i class="fa fa-github-square"></i></a>
+        </li>
+        <li>
+          <a href="https://www.freecodecamp.org/sonnerz" title="free code camp" target="blank"><i
+              class="fa fa-free-code-camp"></i></a>
+        </li>
+        <li>
+          <a class="nav-link text-light" href="mailto:sonya.cooley@mail.com" target="_blank" title="email me"><i
+              class="fa fa-envelope-square"></i></a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <header>
+    <h1 id="projectTitle"></h1>
+    <p>Number of issues: <span id="issue-count"></span></p>    
+  </header>
+  <nav>
+    <div>[ <a href="/">Home</a> ]</div>
+    <div>[ <a href="#submit">Submit a new issue</a> ]</div>
+    <div>[ <a href="#update">Update an issue</a> ]</div>
+    <div>[ <a href="#delete">Delete an issue</a> ]</div>
+  </nav>
+  <div id="issueDisplay"></div>
+  <p id="show-result"></p>
+
+  <section id="formsDiv">
+    <center>
+      <div id="submit">
+        <h2>Submit a new issue:</h2>
+        <form id="newIssue" method="post">
+          <input type="text" name="issue_title" placeholder="*Title" required="">
+          <textarea type="text" name="issue_text" placeholder="*Text" required=""></textarea>
+          <input type="text" name="created_by" placeholder="*Created by" required="">
+          <input type="text" name="assigned_to" placeholder="(opt) Assigned to">
+          <input type="text" name="status_text" placeholder="(opt) Status text"><br>
+          <button type="submit">Submit Issue</button>
+        </form>
+      </div>
+      <div class="btt">
+        <hr>[ <a href="#top">Back to Top</a> ]
+      </div>
+      <div id="update">
+        <h2>Update an issue:</h2>
+        <form id="updateIssue">
+          <input type="text" name="_id" placeholder="*_id" required="">
+          <input type="text" name="issue_title" placeholder="(opt) Title">
+          <textarea type="text" name="issue_text" placeholder="(opt) Text"></textarea>
+          <input type="text" name="created_by" placeholder="(opt) Created by">
+          <input type="text" name="assigned_to" placeholder="(opt) Assigned to">
+          <input type="text" name="status_text" placeholder="(opt) Status text">
+          <label id="statusCheckbox"><input type="checkbox" name="open" value="false">
+            Check to close issue</label><br>
+          <button type="submit">Update Issue</button>
+        </form>
+      </div>
+      <div class="btt">
+        <hr>[ <a href="#top">Back to Top</a> ]
+      </div>
+      <div id="delete">
+        <h2>Delete issue</h2>
+        <form id="deleteIssue">
+          <input type="text" name="_id" placeholder="_id" required=""><br>
+          <button type="submit">Delete Issue</button>
+        </form>
+      </div>
+      <div class="btt">
+        <hr>[ <a href="#top">Back to Top</a> ]
+      </div>
+    </center>
+  </section>
+
+  <script src="https://code.jquery.com/jquery-2.2.1.min.js"
+    integrity="sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00=" crossorigin="anonymous"></script>
+  <script>
+    $(function () {
+
+      // GET ALL ISSUES For PROJECT
+      var currentProject = window.location.pathname.replace(/\//g, "");
+      var url = "/api/issues/" + currentProject;
+
+      $('#projectTitle').text(currentProject.replace(/%20/g, " "))
+
+      // GET ALL ISSUES
+      $.ajax({
+        type: "GET",
+        url: url,
+        success: function (data) {          
+          if (data.error) {
+            $('#show-result').html(data.error);
+          } else {
+            $("#formsDiv").removeClass("hidden");
+            if (data.issues.length === 0) {
+              $('#issue-count').html("0");
+            } else {
+              $('#issue-count').html(data.issues.length);
+            }
+            var issues = [];
+            data.issues.forEach(function (ele) {
+              var openstatus;
+              (ele.open === true) ? openstatus = 'open' : openstatus = 'closed';
+              var single = [
+                '<div class="issue ' + openstatus + '">',
+                '<h3>' + ele.issue_title + ' -  (' + openstatus + ')</h3>',
+                '<p class="i-id"><b>Id: </b>' + ele._id + '</p>',
+                '<p><b>Status:</b> ' + ele.status_text + '</p>',
+                '<p>' + ele.issue_text + '</p>',
+                '<br>',
+                '<p class="issue-details"><b>Created by:</b> ' + ele.created_by,
+                '<p class="issue-details"><b>Assigned to:</b> ' + ele.assigned_to,
+                '<p class="issue-details"><b>Created on:</b> ' + new Date(ele.created_on).toLocaleDateString("en-GB"),
+                '<p class="issue-details"><b>Last updated:</b> ' + new Date(ele.updated_on).toLocaleDateString("en-GB"),
+                '<div class="i-buttons">',
+                ele.open ? '<a href="#" title="' + ele._id + '" class="closeIssue" id="' + ele._id + '">Close Issue</a>' : '',
+                '<a href="#" title="' + ele._id + '" class="deleteIssue" id="' + ele._id + '">Delete Issue</a>',
+                '</div>',
+                '</div>'
+              ];
+              issues.push(single.join(''));
+            });
+            $('#issueDisplay').html(issues.join(''));
+          }
+        },
+        error: function (data) {
+          $('#show-result').html(data.error);
+        }
+      });
+
+      // NEW ISSUE TYPE POST
+      $('#newIssue').on('submit', function (e) {
+        e.preventDefault();
+        $(this).attr('action', "/api/issues/" + currentProject);
+        $.ajax({
+          type: "POST",
+          url: url,
+          data: $(this).serialize(),
+          success: function (data) {
+            window.location.reload(true);
+          },
+          error: function (data) {
+            $('#show-result').text(JSON.stringify(data.message));
+          }
+        });
+      });
+
+      // UPDATE ISSUE TYPE PUT
+      $('#updateIssue').on('submit', function (e) {
+        e.preventDefault();
+        $.ajax({
+          url: url,
+          data: $('#updateIssue').serialize(),
+          type: "PUT",
+          success: function (data) {
+            if (data.message == "issue does not exist") {
+              $('#show-result').text(JSON.stringify(data.message));
+              $('#jsonResult').text(JSON.stringify(data));
+            } else if (data.message == "no updated field sent") {
+              $('#show-result').text(JSON.stringify(data.message));
+              $('#jsonResult').text(JSON.stringify(data));
+            } else {
+              window.location.reload(true);
+            }
+          }
+        });
+      });
+
+      // CLOSE ISSUE TYPE PUT
+      $('#issueDisplay').on('click', '.closeIssue', function (e) {
+        e.preventDefault();
+        $.ajax({
+          url: url,
+          data: { _id: $(this).attr('id'), open: false },
+          type: "PUT",
+          success: function (data) {
+            alert(data.message);
+            window.location.reload(true);
+          }
+        });
+      });
+
+      // DELETE ISSUE using DELETE Link TYPE DELETE
+      $('#issueDisplay').on('click', '.deleteIssue', function (e) {
+        var url = "/api/issues/" + currentProject;
+        $.ajax({
+          type: "DELETE",
+          url: url,
+          data: { _id: $(this).attr('id') },
+          success: function (data) {
+            alert(data.message);
+            window.location.reload(true);
+          }
+        });
+        e.preventDefault();
+      });
+
+      // DELETE ISSUE using DELETE form TYPE DELETE
+      $('#deleteIssue').on('submit', function (e) {
+        e.preventDefault();
+        $.ajax({
+          url: url,
+          type: 'delete',
+          data: $('#deleteIssue').serialize(),
+          success: function (data) {
+            alert(data.message);
+            window.location.reload(true);
+          },
+          error: function (data) {
+            $('#show-result').text(JSON.stringify(data.message));
+          }
+        });
+      });
+
+    });
+  </script>
+</body>
+
+</html>
+
+    
