@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FCC - Issue Tracker</title>
+  <meta name="description" content="App for tracking project issues">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="shortcut icon" href="./public/favicon.ico" type="image/x-icon" />
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./public/style.css">
+  <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+    type="text/css">
+</head>
+  <body>
+    <header>
+      <h1 id="projectTitle"></h1>
+    </header>
+    <p id="show-result"></p>
+    <center class="hidden">
+      <div id="submitNewIssue">
+        <br>
+        <h3>Submit a new issue:</h3>
+        <form id="newIssue" method="post">
+          <input type="text" name="issue_title" placeholder="*Title" style="width: 320px; margin-bottom: 3px;" required=""><br>
+          <textarea type="text" name="issue_text" placeholder="*Text" style="width: 320px; height: 100px;" required=""></textarea><br>
+          <input type="text" name="created_by" placeholder="*Created by" style="width: 100px" required="">
+          <input type="text" name="assigned_to" placeholder="(opt)Assigned to" style="width: 100px">
+          <input type="text" name="status_text" placeholder="(opt)Status text" style="width: 100px"><br>
+          <button type="submit">Submit Issue</button>
+        </form>
+        <br><br><br>
+        <h3>Update an issue:</h3>
+        <form id="updateIssue" class="border">
+          <input type="text" name="_id" placeholder="*_id" style="width: 320px; margin-bottom: 3px;" required=""><br>
+          <input type="text" name="issue_title" placeholder="(opt)Title" style="width: 320px;"><br>
+          <textarea type="text" name="issue_text" placeholder="(opt)Text" style="width: 320px; height: 100px;"></textarea><br>
+          <input type="text" name="created_by" placeholder="(opt)Created by" style="width: 100px;">
+          <input type="text" name="assigned_to" placeholder="(opt)Assigned to" style="width: 100px;">
+          <input type="text" name="status_text" placeholder="(opt)Status text" style="width: 100px;"><br>
+          <label id="statusCheckbox"><input type="checkbox" name="open" value="false"> Check to close issue</label><br>
+          <button type="submit">Update Issue</button>
+        </form>
+        <br><br><br>
+        <h3>Delete issue</h3>
+        <form id="deleteIssue" class="border">
+          <input type="text" name="_id" placeholder="_id" style="width: 320px; margin-bottom: 3px;" required=""><br>
+          <button type="submit">Delete Issue</button>
+        </form>
+        
+      </div>
+      
+      <div id="issueDisplay"></div>
+      
+      <hr style="margin: 50px; margin-top: 200px">
+    </center>
+    
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"
+            integrity="sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00="
+            crossorigin="anonymous"></script>
+    <script>
+      $(function() {
+        
+        // GET ALL ISSUES For PROJECT
+        var currentProject = window.location.pathname.replace(/\//g, "");
+        var url = "/api/issues/"+currentProject;
+
+        $('#projectTitle').text('All issues for: '+currentProject.replace(/%20/g, " "))
+        
+        // GET ALL ISSUES
+        $.ajax({
+          type: "GET",
+          url: url,
+          success: function(data) {
+          console.log("FRONT:  ",data);
+          if (data.error) {
+            $('#show-result').html(data.error);            
+          } else {
+            $("center").removeClass("hidden");
+            $('#projectTitle').append("<br>No of issues: " +data.issues.length );
+              var issues= [];
+              data.issues.forEach(function(ele) {
+                var openstatus;
+                (ele.open===true) ? openstatus = 'open' : openstatus = 'closed';
+                var single = [
+                  '<div class="issue '+openstatus+'">',
+                  '<h3>'+ele.issue_title+' -  ('+openstatus+')</h3>',
+                  '<br>',
+                  '<p>'+ele._id+'</p>',
+                  '<p>'+ele.issue_text+'</p>',
+                  '<p>'+ele.status_text+'</p>',
+                  '<br>',
+                  '<p class="id"><b>Created by:</b> '+ele.created_by+'  <b>Assigned to:</b> '+ele.assigned_to,
+                  '<p class="id"><b>Created on:</b> '+ele.created_on+'  <b>Last updated:</b> '+ele.updated_on,
+                  '<br>',
+                  ele.open ? '<a href="#" title="'+ele._id+'" class="closeIssue" id="'+ele._id+'">close?</a>' : '',  
+                  '<a href="#" title="'+ele._id+'" class="deleteIssue" id="'+ele._id+'">delete?</a>',
+                  '</div>'                
+                ];
+                issues.push(single.join(''));
+              });
+              $('#issueDisplay').html(issues.join(''));
+            }
+          },
+          error: function(data) {
+            console.log("FRONT---ERROR  ",data);
+            $('#show-result').html(data.error);
+          }
+        });
+        
+        // NEW ISSUE TYPE POST
+        $('#newIssue').on('submit', function(e){
+          e.preventDefault();
+          $(this).attr('action', "/api/issues/" + currentProject);
+          $.ajax({
+            type: "POST",
+            url:  url,
+            data: $(this).serialize(),
+            success: function(data) {
+              window.location.reload(true); 
+            },
+            error: function(data) {
+              console.log("FRONT  ",data); 
+            }
+          });
+        });
+        
+        // UPDATE ISSUE TYPE PUT
+        $('#updateIssue').on('submit', function (e) {
+          e.preventDefault();
+          $.ajax({
+            url: url,
+            data: $('#updateIssue').serialize(),
+            type: "PUT",               
+            success: function(data) {
+              console.log("DATA:", data.message);
+              if (data.message == "issue does not exist") {
+                $('#show-result').text(JSON.stringify(data.message));
+                $('#jsonResult').text(JSON.stringify(data));
+              } else if (data.message == "no updated field sent")  {
+                $('#show-result').text(JSON.stringify(data.message));
+                $('#jsonResult').text(JSON.stringify(data));
+              } else {
+                window.location.reload(true); 
+              } 
+            }
+          });
+        });
+        
+        // CLOSE ISSUE TYPE PUT
+        $('#issueDisplay').on('click','.closeIssue', function(e) {
+          e.preventDefault();
+          $.ajax({
+            url: url,
+            data: {_id: $(this).attr('id'), open: false},
+            type: "PUT",    
+              success: function(data) { 
+              alert(data.message);
+              window.location.reload(true);               
+            }
+          });          
+        });
+        
+        // DELETE ISSUE using DELETE Link TYPE DELETE
+        $('#issueDisplay').on('click','.deleteIssue', function(e) {
+          var url = "/api/issues/"+currentProject;
+          $.ajax({
+            type: "DELETE",
+            url: url,
+            data: {_id: $(this).attr('id')},
+            success: function(data) { 
+              alert(data.message);
+              window.location.reload(true); 
+            }
+          });
+          e.preventDefault();
+        });
+        
+        // DELETE ISSUE using DELETE form TYPE DELETE
+        $('#deleteIssue').on('submit', function (e) {
+          e.preventDefault();
+          $.ajax({
+            url: url,
+            type: 'delete',
+            data: $('#deleteIssue').serialize(),
+            success: function(data) {
+              console.log("MESSAGE:", data.message);
+              alert(data.message);
+              window.location.reload(true);
+            },
+            error: function(data) {
+              console.log(data)
+            }
+          });
+        });
+        
+      });
+   </script>
+  </body>
+</html>
+
+    
